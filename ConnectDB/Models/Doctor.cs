@@ -16,5 +16,6 @@ namespace ConnectDB.Models
         [Required]
         public string Specialization { get; set; } = string.Empty;
     }
+
 }
 

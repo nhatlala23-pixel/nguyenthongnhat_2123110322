@@ -74,7 +74,108 @@ namespace ConnectDB.Controllers
         [Authorize]
         public async Task<IActionResult> GetAppointments()
         {
-            return Ok(await _context.Appointments.Include(a => a.Patient).Include(a => a.Doctor).ToListAsync());
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+
+            if (userRole == "Admin" || userRole == "Doctor" || userRole == "Receptionist")
+            {
+                return Ok(await _context.Appointments.Include(a => a.Patient).Include(a => a.Doctor).ToListAsync());
+            }
+
+            // Bệnh nhân chỉ thấy lịch của mình
+            var patient = await _context.Patients.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (patient == null) return NotFound("Patient profile not found");
+
+            return Ok(await _context.Appointments
+                .Where(a => a.PatientId == patient.Id)
+                .Include(a => a.Doctor)
+                .ToListAsync());
+        }
+
+        // 4. Xem chi tiết 1 lịch hẹn
+        [HttpGet("{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetAppointment(int id)
+        {
+            var appointment = await _context.Appointments
+                .Include(a => a.Patient)
+                .Include(a => a.Doctor)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (appointment == null) return NotFound();
+
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+
+            if (userRole != "Admin" && userRole != "Doctor" && userRole != "Receptionist" && appointment.Patient?.UserId != userId)
+            {
+                return Forbid();
+            }
+
+            return Ok(appointment);
+        }
+
+        // 5. Cập nhật lịch hẹn (Patient đổi lịch/bác sĩ khi còn Pending)
+        [HttpPut("{id}")]
+        [Authorize]
+        public async Task<IActionResult> PutAppointment(int id, [FromBody] AppointmentUpdateDto model)
+        {
+            var appointment = await _context.Appointments.Include(a => a.Patient).FirstOrDefaultAsync(a => a.Id == id);
+            if (appointment == null) return NotFound();
+
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+
+            // Kiểm tra quyền
+            if (userRole != "Admin" && appointment.Patient?.UserId != userId)
+            {
+                return Forbid();
+            }
+
+            // Chỉ cho phép sửa khi trạng thái là Pending
+            if (appointment.Status != "Pending" && userRole != "Admin")
+            {
+                return BadRequest("Cannot change appointment that is not in Pending status.");
+            }
+
+            appointment.DoctorId = model.DoctorId;
+            appointment.AppointmentTime = model.AppointmentTime;
+            
+            if (userRole == "Admin" && !string.IsNullOrEmpty(model.Status))
+            {
+                appointment.Status = model.Status;
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok("Appointment updated successfully");
+        }
+
+        // 6. Xóa/Hủy lịch hẹn
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteAppointment(int id)
+        {
+            var appointment = await _context.Appointments.Include(a => a.Patient).FirstOrDefaultAsync(a => a.Id == id);
+            if (appointment == null) return NotFound();
+
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+
+            if (userRole != "Admin" && appointment.Patient?.UserId != userId)
+            {
+                return Forbid();
+            }
+
+            // Nếu là bệnh nhân, chỉ được xóa khi chưa khám (Pending hoặc Confirmed)
+            if (userRole == "Patient" && appointment.Status == "Completed")
+            {
+                return BadRequest("Cannot cancel a completed appointment.");
+            }
+
+            _context.Appointments.Remove(appointment);
+            await _context.SaveChangesAsync();
+
+            return Ok("Appointment deleted/cancelled");
         }
     }
 
@@ -82,6 +183,13 @@ namespace ConnectDB.Controllers
     {
         public int DoctorId { get; set; }
         public DateTime AppointmentTime { get; set; }
+    }
+
+    public class AppointmentUpdateDto
+    {
+        public int DoctorId { get; set; }
+        public DateTime AppointmentTime { get; set; }
+        public string? Status { get; set; } // Admin có thể đổi status trực tiếp
     }
 }
 
