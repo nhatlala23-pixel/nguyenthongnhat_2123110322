@@ -9,7 +9,7 @@ namespace ConnectDB.Models
         public int Id { get; set; }
         public int UserId { get; set; }
         [ForeignKey("UserId")]
-        public virtual User? User { get; set; }
+        public virtual User? User { get; set;set; }
 
         [Required]
         public string FullName { get; set; } = string.Empty;
