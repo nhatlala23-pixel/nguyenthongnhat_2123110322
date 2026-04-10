@@ -36,11 +36,7 @@ namespace ConnectDB.Middlewares
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-            var message = $"Internal Server Error: {exception.Message}";
-            if (exception.InnerException != null) 
-                message += $" | Inner: {exception.InnerException.Message}";
-                
-            var response = ApiResponse.FailureResult(message);
+            var response = ApiResponse.FailureResult("Internal Server Error from the custom middleware.");
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(response));
         }
