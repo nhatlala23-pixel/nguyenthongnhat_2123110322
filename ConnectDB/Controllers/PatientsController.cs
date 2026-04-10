@@ -3,7 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ConnectDB.Data;
 using ConnectDB.Models;
+using ConnectDB.DTOs;
 using System.Security.Claims;
+
+using ConnectDB.Services;
 
 namespace ConnectDB.Controllers
 {
@@ -11,11 +14,11 @@ namespace ConnectDB.Controllers
     [ApiController]
     public class PatientsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IPatientService _patientService;
 
-        public PatientsController(AppDbContext context)
+        public PatientsController(IPatientService patientService)
         {
-            _context = context;
+            _patientService = patientService;
         }
 
         // GET: api/Patients
@@ -23,7 +26,7 @@ namespace ConnectDB.Controllers
         [Authorize(Roles = "Admin,Doctor,Receptionist")]
         public async Task<ActionResult<IEnumerable<Patient>>> GetPatients()
         {
-            return await _context.Patients.Include(p => p.User).ToListAsync();
+            return Ok(await _patientService.GetAllPatientsAsync());
         }
 
         // GET: api/Patients/5
@@ -31,23 +34,13 @@ namespace ConnectDB.Controllers
         [Authorize]
         public async Task<ActionResult<Patient>> GetPatient(int id)
         {
-            var patient = await _context.Patients.Include(p => p.User).FirstOrDefaultAsync(p => p.Id == id);
-
-            if (patient == null)
-            {
-                return NotFound();
-            }
-
-            // Chỉ Admin, Doctor, Receptionist hoặc chính Bệnh nhân đó mới được xem
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userRole = User.FindFirstValue(ClaimTypes.Role)!;
 
-            if (userRole != "Admin" && userRole != "Doctor" && userRole != "Receptionist" && patient.UserId != userId)
-            {
-                return Forbid();
-            }
+            var patient = await _patientService.GetPatientByIdAsync(id, userId, userRole);
+            if (patient == null) return NotFound();
 
-            return patient;
+            return Ok(patient);
         }
 
         // PUT: api/Patients/5
@@ -55,32 +48,11 @@ namespace ConnectDB.Controllers
         [Authorize]
         public async Task<IActionResult> PutPatient(int id, PatientUpdateDto model)
         {
-            var patient = await _context.Patients.FindAsync(id);
-            if (patient == null) return NotFound();
-
-            // Phân quyền: Admin hoặc chính Bệnh nhân
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userRole = User.FindFirstValue(ClaimTypes.Role)!;
 
-            if (userRole != "Admin" && patient.UserId != userId)
-            {
-                return Forbid();
-            }
-
-            patient.FullName = model.FullName;
-            patient.DateOfBirth = model.DateOfBirth;
-            patient.Gender = model.Gender;
-            patient.PhoneNumber = model.PhoneNumber;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!PatientExists(id)) return NotFound();
-                else throw;
-            }
+            var success = await _patientService.UpdatePatientAsync(id, userId, userRole, model);
+            if (!success) return Forbid();
 
             return NoContent();
         }
@@ -90,26 +62,12 @@ namespace ConnectDB.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeletePatient(int id)
         {
-            var patient = await _context.Patients.FindAsync(id);
-            if (patient == null) return NotFound();
-
-            _context.Patients.Remove(patient);
-            await _context.SaveChangesAsync();
+            var success = await _patientService.DeletePatientAsync(id);
+            if (!success) return NotFound();
 
             return NoContent();
         }
-
-        private bool PatientExists(int id)
-        {
-            return _context.Patients.Any(e => e.Id == id);
-        }
     }
 
-    public class PatientUpdateDto
-    {
-        public string FullName { get; set; } = string.Empty;
-        public DateTime DateOfBirth { get; set; }
-        public string Gender { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-    }
+
 }

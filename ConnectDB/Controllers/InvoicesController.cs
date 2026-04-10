@@ -3,7 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ConnectDB.Data;
 using ConnectDB.Models;
+using ConnectDB.DTOs;
 using System.Security.Claims;
+
+using ConnectDB.Services;
 
 namespace ConnectDB.Controllers
 {
@@ -11,11 +14,11 @@ namespace ConnectDB.Controllers
     [ApiController]
     public class InvoicesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IInvoiceService _invoiceService;
 
-        public InvoicesController(AppDbContext context)
+        public InvoicesController(IInvoiceService invoiceService)
         {
-            _context = context;
+            _invoiceService = invoiceService;
         }
 
         // 1. Xem hóa đơn
@@ -23,17 +26,12 @@ namespace ConnectDB.Controllers
         [Authorize]
         public async Task<IActionResult> GetInvoice(int id)
         {
-            var invoice = await _context.Invoices.Include(i => i.Appointment).FirstOrDefaultAsync(i => i.Id == id);
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userRole = User.FindFirstValue(ClaimTypes.Role)!;
+
+            var invoice = await _invoiceService.GetInvoiceAsync(id, userId, userRole);
             if (invoice == null) return NotFound();
             
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var userRole = User.FindFirstValue(ClaimTypes.Role);
-
-            if (userRole != "Admin" && userRole != "Receptionist" && invoice.Appointment?.Patient?.UserId != userId)
-            {
-                return Forbid();
-            }
-
             return Ok(invoice);
         }
 
@@ -43,18 +41,10 @@ namespace ConnectDB.Controllers
         public async Task<IActionResult> GetInvoices()
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userRole = User.FindFirstValue(ClaimTypes.Role)!;
 
-            if (userRole == "Admin" || userRole == "Receptionist")
-            {
-                return Ok(await _context.Invoices.Include(i => i.Appointment).ToListAsync());
-            }
-
-            // Bệnh nhân xem hóa đơn của mình
-            return Ok(await _context.Invoices
-                .Include(i => i.Appointment)
-                .Where(i => i.Appointment!.Patient!.UserId == userId)
-                .ToListAsync());
+            var invoices = await _invoiceService.GetAllInvoicesAsync(userId, userRole);
+            return Ok(invoices);
         }
 
         // 2. Thanh toán hóa đơn (Dành cho Patient hoặc Receptionist)
@@ -62,35 +52,23 @@ namespace ConnectDB.Controllers
         [Authorize(Roles = "Patient,Receptionist")]
         public async Task<IActionResult> PayInvoice(int id)
         {
-            var invoice = await _context.Invoices.Include(i => i.Appointment).FirstOrDefaultAsync(i => i.Id == id);
-            if (invoice == null) return NotFound();
-
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userRole = User.FindFirstValue(ClaimTypes.Role)!;
 
-            if (userRole == "Patient" && invoice.Appointment?.Patient?.UserId != userId)
-            {
-                return Forbid();
-            }
-
-            invoice.IsPaid = true;
-            await _context.SaveChangesAsync();
+            var success = await _invoiceService.PayInvoiceAsync(id, userId, userRole);
+            if (!success) return NotFound();
 
             return Ok("Invoice paid successfully");
         }
 
-        // 3. Admin chỉnh sửa hóa đơn (Ví dụ giảm giá hoặc sửa tiền)
+        // 3. Admin chỉnh sửa hóa đơn
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutInvoice(int id, [FromBody] InvoiceUpdateDto model)
         {
-            var invoice = await _context.Invoices.FindAsync(id);
-            if (invoice == null) return NotFound();
+            var success = await _invoiceService.UpdateInvoiceAsync(id, model);
+            if (!success) return NotFound();
 
-            invoice.TotalAmount = model.TotalAmount;
-            invoice.IsPaid = model.IsPaid;
-
-            await _context.SaveChangesAsync();
             return Ok("Invoice updated");
         }
 
@@ -99,19 +77,13 @@ namespace ConnectDB.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteInvoice(int id)
         {
-            var invoice = await _context.Invoices.FindAsync(id);
-            if (invoice == null) return NotFound();
+            var success = await _invoiceService.DeleteInvoiceAsync(id);
+            if (!success) return NotFound();
 
-            _context.Invoices.Remove(invoice);
-            await _context.SaveChangesAsync();
             return Ok("Invoice deleted");
         }
     }
 
-    public class InvoiceUpdateDto
-    {
-        public decimal TotalAmount { get; set; }
-        public bool IsPaid { get; set; }
-    }
+
 }
 

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using ConnectDB.Services;
 
 namespace ConnectDB
 {
@@ -14,8 +15,18 @@ namespace ConnectDB
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            // Nếu có DATABASE_URL (PostgreSQL trên Render) thì dùng Postgres, còn không dùng SQL Server local
+            var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+            if (!string.IsNullOrEmpty(databaseUrl))
+            {
+                builder.Services.AddDbContext<AppDbContext>(options =>
+                    options.UseNpgsql(databaseUrl));
+            }
+            else
+            {
+                builder.Services.AddDbContext<AppDbContext>(options =>
+                    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            }
 
             // Configure JWT Authentication
             var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -41,6 +52,16 @@ namespace ConnectDB
             });
 
             builder.Services.AddControllers();
+            
+            // Register Services
+            builder.Services.AddScoped<IVnPayService, VnPayService>();
+            builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+            builder.Services.AddScoped<IMedicalRecordService, MedicalRecordService>();
+            builder.Services.AddScoped<IDoctorService, DoctorService>();
+            builder.Services.AddScoped<IPatientService, PatientService>();
+            builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             
@@ -75,10 +96,19 @@ namespace ConnectDB
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            app.UseMiddleware<Middlewares.ExceptionMiddleware>();
+            app.UseSwagger();
+            app.UseSwaggerUI(c => 
             {
-                app.UseSwagger();
-                app.UseSwaggerUI();
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Hospital API v1");
+                c.RoutePrefix = string.Empty; // Để truy cập thẳng qua root URL / 
+            });
+
+            // Tự động apply Migration khi App khởi chạy trên Render
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                dbContext.Database.Migrate();
             }
 
             app.UseHttpsRedirection();
@@ -86,11 +116,9 @@ namespace ConnectDB
             app.UseAuthentication();
             app.UseAuthorization();
 
-
             app.MapControllers();
 
             app.Run();
         }
     }
 }
-

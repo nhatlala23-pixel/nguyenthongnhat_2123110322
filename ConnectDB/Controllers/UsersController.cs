@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ConnectDB.Data;
 using ConnectDB.Models;
+using ConnectDB.DTOs;
+
+using ConnectDB.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ConnectDB.Controllers
 {
@@ -11,44 +15,36 @@ namespace ConnectDB.Controllers
     [Authorize(Roles = "Admin")]
     public class UsersController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IUserService _userService;
 
-        public UsersController(AppDbContext context)
+        public UsersController(IUserService userService)
         {
-            _context = context;
+            _userService = userService;
         }
 
         // GET: api/Users
         [HttpGet]
         public async Task<ActionResult<IEnumerable<User>>> GetUsers()
         {
-            return await _context.Users.ToListAsync();
+            return Ok(await _userService.GetAllUsersAsync());
         }
 
         // GET: api/Users/5
         [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetUser(int id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _userService.GetUserByIdAsync(id);
             if (user == null) return NotFound();
-            return user;
+            return Ok(user);
         }
 
         // PUT: api/Users/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutUser(int id, UserUpdateDto model)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound();
+            var success = await _userService.UpdateUserAsync(id, model);
+            if (!success) return NotFound();
 
-            user.Role = model.Role;
-            // Password change can be added here with hashing
-            if (!string.IsNullOrEmpty(model.Password))
-            {
-                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
-            }
-
-            await _context.SaveChangesAsync();
             return NoContent();
         }
 
@@ -56,21 +52,12 @@ namespace ConnectDB.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound();
-
-            // Cần cẩn thận khi xóa User vì có ràng buộc FK với Patient/Doctor
-            // Ở đây ta có thể xóa luôn profile liên quan hoặc chặn xóa
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            var success = await _userService.DeleteUserAsync(id);
+            if (!success) return NotFound();
 
             return NoContent();
         }
     }
 
-    public class UserUpdateDto
-    {
-        public string Role { get; set; } = "Patient";
-        public string? Password { get; set; }
-    }
+
 }

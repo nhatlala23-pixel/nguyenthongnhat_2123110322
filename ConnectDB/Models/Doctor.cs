@@ -15,6 +15,10 @@ namespace ConnectDB.Models
         public string FullName { get; set; } = string.Empty;
         [Required]
         public string Specialization { get; set; } = string.Empty;
+
+        public int? DepartmentId { get; set; }
+        [ForeignKey("DepartmentId")]
+        public virtual Department? Department { get; set; }
     }
 
 }

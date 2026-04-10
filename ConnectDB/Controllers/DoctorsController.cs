@@ -3,7 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ConnectDB.Data;
 using ConnectDB.Models;
+using ConnectDB.DTOs;
 using System.Security.Claims;
+
+using ConnectDB.Services;
 
 namespace ConnectDB.Controllers
 {
@@ -11,61 +14,52 @@ namespace ConnectDB.Controllers
     [ApiController]
     public class DoctorsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IDoctorService _doctorService;
+        private readonly IUserService _userService; // Need this for PostDoctor
 
-        public DoctorsController(AppDbContext context)
+        public DoctorsController(IDoctorService doctorService, IUserService userService)
         {
-            _context = context;
+            _doctorService = doctorService;
+            _userService = userService;
         }
 
         // POST: api/Doctors
-        // Dành cho Admin thêm bác sĩ mới (Tạo cả User và Doctor profile)
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Doctor>> PostDoctor(DoctorCreateDto model)
         {
-            if (await _context.Users.AnyAsync(u => u.Username == model.Username))
-                return BadRequest("Username already exists");
+            // Tạm thời giữ logic đăng ký User ở đây hoặc ủy quyền cho UserService
+            var success = await _userService.RegisterAsync(new UserRegisterDto 
+            { 
+                Username = model.Username, 
+                Password = model.Password, 
+                Role = "Doctor", 
+                FullName = model.FullName, 
+                Specialization = model.Specialization 
+            });
 
-            // 1. Tạo User account
-            var user = new User
-            {
-                Username = model.Username,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
-                Role = "Doctor"
-            };
+            if (!success) return BadRequest("Username already exists");
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            // 2. Tạo Doctor profile
-            var doctor = new Doctor
-            {
-                UserId = user.Id,
-                FullName = model.FullName,
-                Specialization = model.Specialization
-            };
-
-            _context.Doctors.Add(doctor);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetDoctor", new { id = doctor.Id }, doctor);
+            // Lấy lại bác sĩ vừa tạo (vì logic tạo profile đã nằm trong RegisterAsync của UserService)
+            // Đây là một ví dụ về việc logic RegisterAsync đang gánh quá nhiều. 
+            // Nhưng để cho đồng bộ, ta cứ lấy danh sách.
+            return Ok("Doctor created successfully via registration");
         }
 
         // GET: api/Doctors
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Doctor>>> GetDoctors()
         {
-            return await _context.Doctors.ToListAsync();
+            return Ok(await _doctorService.GetAllDoctorsAsync());
         }
 
         // GET: api/Doctors/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Doctor>> GetDoctor(int id)
         {
-            var doctor = await _context.Doctors.FindAsync(id);
+            var doctor = await _doctorService.GetDoctorByIdAsync(id);
             if (doctor == null) return NotFound();
-            return doctor;
+            return Ok(doctor);
         }
 
         // PUT: api/Doctors/5
@@ -73,13 +67,9 @@ namespace ConnectDB.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutDoctor(int id, DoctorUpdateDto model)
         {
-            var doctor = await _context.Doctors.FindAsync(id);
-            if (doctor == null) return NotFound();
+            var success = await _doctorService.UpdateDoctorAsync(id, model);
+            if (!success) return NotFound();
 
-            doctor.FullName = model.FullName;
-            doctor.Specialization = model.Specialization;
-
-            await _context.SaveChangesAsync();
             return NoContent();
         }
 
@@ -88,27 +78,12 @@ namespace ConnectDB.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteDoctor(int id)
         {
-            var doctor = await _context.Doctors.FindAsync(id);
-            if (doctor == null) return NotFound();
-
-            _context.Doctors.Remove(doctor);
-            await _context.SaveChangesAsync();
+            var success = await _doctorService.DeleteDoctorAsync(id);
+            if (!success) return NotFound();
 
             return NoContent();
         }
     }
 
-    public class DoctorUpdateDto
-    {
-        public string FullName { get; set; } = string.Empty;
-        public string Specialization { get; set; } = string.Empty;
-    }
 
-    public class DoctorCreateDto
-    {
-        public string Username { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string Specialization { get; set; } = string.Empty;
-    }
 }
