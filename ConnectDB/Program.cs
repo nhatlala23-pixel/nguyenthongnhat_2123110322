@@ -135,11 +135,11 @@ namespace ConnectDB
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                     
-                    // Nếu trên Render (Postgres), dùng EnsureCreated để tự sinh bảng cho nhanh và chính xác
-                    // Nếu ở local (SQL Server), dùng Migrate như cũ
+                    // Nếu trên Render (Postgres), dùng cơ chế ép tạo bảng
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
                     {
-                        dbContext.Database.EnsureCreated();
+                        var databaseCreator = dbContext.Database.GetService<Microsoft.EntityFrameworkCore.Storage.IDatabaseCreator>() as Microsoft.EntityFrameworkCore.Storage.RelationalDatabaseCreator;
+                        try { databaseCreator.CreateTables(); } catch { /* Bảng có thể đã tồn tại */ }
                     }
                     else
                     {
