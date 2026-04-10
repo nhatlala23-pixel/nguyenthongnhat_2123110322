@@ -20,13 +20,15 @@ namespace ConnectDB
 
             // Add services to the container.
             // Nếu có DATABASE_URL (PostgreSQL trên Render) thì chuyển đổi sang Connection String chuẩn của .NET
-            var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+            var rawDatabaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+            var databaseUrl = rawDatabaseUrl?.Trim(' ', '"', '\'', '\n', '\r');
             string connectionString;
 
             if (!string.IsNullOrEmpty(databaseUrl))
             {
-                // Nếu chuỗi bắt đầu bằng postgres:// (định dạng mặc định của Render) thì convert
-                if (databaseUrl.StartsWith("postgres://"))
+                // Xử lý cả 'postgres://' và 'postgresql://' để parse ra connection string
+                if (databaseUrl.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) || 
+                    databaseUrl.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
                 {
                     var databaseUri = new Uri(databaseUrl);
                     var userInfo = databaseUri.UserInfo.Split(':');
