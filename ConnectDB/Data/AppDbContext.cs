@@ -34,6 +34,16 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(a => a.DoctorId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Chuyển tất cả tên bảng sang chữ thường (PostgreSQL friendly)
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            var tableName = entity.GetTableName();
+            if (!string.IsNullOrEmpty(tableName))
+            {
+                entity.SetTableName(tableName.ToLower());
+            }
+        }
     }
 }
 

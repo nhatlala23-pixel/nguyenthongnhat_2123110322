@@ -128,18 +128,28 @@ namespace ConnectDB
                 c.RoutePrefix = string.Empty; // Để truy cập thẳng qua root URL / 
             });
 
-            // Tự động apply Migration khi App khởi chạy trên Render
+            // Tự động khởi tạo/apply Migration khi App khởi chạy
             try
             {
                 using (var scope = app.Services.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                    dbContext.Database.Migrate();
+                    
+                    // Nếu trên Render (Postgres), dùng EnsureCreated để tự sinh bảng cho nhanh và chính xác
+                    // Nếu ở local (SQL Server), dùng Migrate như cũ
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
+                    {
+                        dbContext.Database.EnsureCreated();
+                    }
+                    else
+                    {
+                        dbContext.Database.Migrate();
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Migration Error] {ex.Message}");
+                Console.WriteLine($"[Database Init Error] {ex.Message}");
             }
 
             // Chỉ dùng HTTPS redirect khi local, Render tự lo HTTPS ở load balancer
