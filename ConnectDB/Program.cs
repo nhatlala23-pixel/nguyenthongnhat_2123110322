@@ -14,6 +14,10 @@ namespace ConnectDB
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // Lấy PORT từ Render (hoặc dùng 8080 mặc định)
+            var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+            builder.WebHost.UseUrls($"http://+:{port}");
+
             // Add services to the container.
             // Nếu có DATABASE_URL (PostgreSQL trên Render) thì dùng Postgres, còn không dùng SQL Server local
             var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
@@ -105,13 +109,24 @@ namespace ConnectDB
             });
 
             // Tự động apply Migration khi App khởi chạy trên Render
-            using (var scope = app.Services.CreateScope())
+            try
             {
-                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                dbContext.Database.Migrate();
+                using (var scope = app.Services.CreateScope())
+                {
+                    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    dbContext.Database.Migrate();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Migration Error] {ex.Message}");
             }
 
-            app.UseHttpsRedirection();
+            // Chỉ dùng HTTPS redirect khi local, Render tự lo HTTPS ở load balancer
+            if (!app.Environment.IsProduction())
+            {
+                app.UseHttpsRedirection();
+            }
 
             app.UseAuthentication();
             app.UseAuthorization();
