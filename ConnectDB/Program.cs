@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
 using ConnectDB.Services;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace ConnectDB
 {
