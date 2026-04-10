@@ -19,12 +19,29 @@ namespace ConnectDB
             builder.WebHost.UseUrls($"http://+:{port}");
 
             // Add services to the container.
-            // Nếu có DATABASE_URL (PostgreSQL trên Render) thì dùng Postgres, còn không dùng SQL Server local
+            // Nếu có DATABASE_URL (PostgreSQL trên Render) thì chuyển đổi sang Connection String chuẩn của .NET
             var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+            string connectionString;
+
             if (!string.IsNullOrEmpty(databaseUrl))
             {
+                // Nếu chuỗi bắt đầu bằng postgres:// (định dạng mặc định của Render) thì convert
+                if (databaseUrl.StartsWith("postgres://"))
+                {
+                    var databaseUri = new Uri(databaseUrl);
+                    var userInfo = databaseUri.UserInfo.Split(':');
+                    connectionString = $"Host={databaseUri.Host};Port={databaseUri.Port};Database={databaseUri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=True;";
+                }
+                else
+                {
+                    connectionString = databaseUrl;
+                }
+                
                 builder.Services.AddDbContext<AppDbContext>(options =>
-                    options.UseNpgsql(databaseUrl));
+                    options.UseNpgsql(connectionString));
+                
+                // Đồng bộ kiểu dữ liệu DateTime với PostgreSQL (Tránh lỗi UTC)
+                AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             }
             else
             {
