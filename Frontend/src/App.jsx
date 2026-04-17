@@ -17,6 +17,9 @@ import AdminDepartments from './pages/admin/AdminDepartments';
 import AdminSchedules from './pages/admin/AdminSchedules';
 import AdminAppointments from './pages/admin/AdminAppointments';
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
+import DoctorPatients from './pages/doctor/DoctorPatients';
+import DoctorAppointments from './pages/doctor/DoctorAppointments';
+import PatientHistory from './pages/doctor/PatientHistory';
 import PatientHome from './pages/patient/PatientHome';
 
 function App() {
@@ -57,6 +60,9 @@ function App() {
           >
             <Route index element={<Navigate to="/doctor/dashboard" replace />} />
             <Route path="dashboard" element={<DoctorDashboard />} />
+            <Route path="patients" element={<DoctorPatients />} />
+            <Route path="appointments" element={<DoctorAppointments />} />
+            <Route path="patient/:id" element={<PatientHistory />} />
           </Route>
 
           {/* Patient Routes */}

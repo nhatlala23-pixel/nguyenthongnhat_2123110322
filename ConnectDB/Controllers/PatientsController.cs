@@ -26,6 +26,14 @@ namespace ConnectDB.Controllers
         [Authorize(Roles = "Admin,Doctor,Receptionist")]
         public async Task<ActionResult<IEnumerable<Patient>>> GetPatients()
         {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var role = User.FindFirstValue(ClaimTypes.Role)!;
+
+            if (role == "Doctor")
+            {
+                return Ok(await _patientService.GetPatientsByDoctorAsync(userId));
+            }
+
             return Ok(await _patientService.GetAllPatientsAsync());
         }
 

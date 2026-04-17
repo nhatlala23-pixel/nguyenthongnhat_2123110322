@@ -10,6 +10,7 @@ namespace ConnectDB.Services
         Task<int?> CreateMedicalRecordAsync(MedicalRecordCreateDto model);
         Task<IEnumerable<MedicalRecord>> GetMedicalRecordsAsync(int userId, string role);
         Task<object?> GetMedicalRecordDetailAsync(int id, int userId, string role);
+        Task<object?> GetPatientHistoryAsync(int patientId);
         Task<bool> UpdateMedicalRecordAsync(int id, MedicalRecordUpdateDto model);
         Task<bool> DeleteMedicalRecordAsync(int id);
     }

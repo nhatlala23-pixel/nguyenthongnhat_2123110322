@@ -13,8 +13,10 @@ import {
   Loader2,
   TrendingUp
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import ExaminationModal from '../../components/doctor/ExaminationModal';
 
 const StatCard = ({ icon: Icon, label, value, subtext, trend, color }) => (
   <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all group flex flex-col justify-between min-h-[180px]">
@@ -41,27 +43,42 @@ const StatCard = ({ icon: Icon, label, value, subtext, trend, color }) => (
 
 const DoctorDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isExamModalOpen, setIsExamModalOpen] = useState(false);
+  const [selectedApp, setSelectedApp] = useState(null);
+
+  const fetchData = async () => {
+    try {
+      const [statsRes, appRes] = await Promise.all([
+        api.get('/DoctorDashboard/stats'),
+        api.get('/DoctorDashboard/recent-appointments')
+      ]);
+      setStats(statsRes.data);
+      setAppointments(appRes.data);
+    } catch (err) {
+      console.error("Error fetching dashboard data", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsRes, appRes] = await Promise.all([
-          api.get('/DoctorDashboard/stats'),
-          api.get('/DoctorDashboard/recent-appointments')
-        ]);
-        setStats(statsRes.data);
-        setAppointments(appRes.data);
-      } catch (err) {
-        console.error("Error fetching dashboard data", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
+
+  const handleExamine = (app) => {
+    setSelectedApp(app);
+    setIsExamModalOpen(true);
+  };
+
+  const handleViewPatient = (patientId) => {
+    // Extract numerical ID from BN-0002
+    const id = patientId.split('-').pop();
+    navigate(`/doctor/patient/${parseInt(id)}`);
+  };
 
   if (loading) {
     return (
@@ -137,8 +154,8 @@ const DoctorDashboard = () => {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {appointments.map((app) => (
-                  <tr key={app.id} className="group hover:bg-gray-50/50 transition-all">
-                    <td className="px-10 py-6">
+                  <tr key={app.id} className="group hover:bg-gray-50/50 transition-all cursor-pointer">
+                    <td className="px-10 py-6" onClick={() => handleViewPatient(app.patientId)}>
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center font-black text-gray-400 text-sm overflow-hidden border-2 border-white shadow-sm group-hover:scale-110 transition-transform">
                           {app.patientName.charAt(0)}
@@ -149,7 +166,7 @@ const DoctorDashboard = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-6">
+                    <td className="px-6 py-6" onClick={() => handleViewPatient(app.patientId)}>
                       <div className="flex items-center gap-2 text-blue-600 font-black text-sm">
                         <Clock size={16} />
                         {app.time}
@@ -170,7 +187,10 @@ const DoctorDashboard = () => {
                     </td>
                     <td className="px-10 py-6 text-right">
                        <div className="flex justify-end gap-3 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
-                          <button className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleExamine(app); }}
+                            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all"
+                          >
                             <Play size={14} fill="currentColor" />
                             KHÁM NGAY
                           </button>
@@ -247,6 +267,14 @@ const DoctorDashboard = () => {
           </div>
         </div>
       </div>
+      {selectedApp && (
+        <ExaminationModal 
+          isOpen={isExamModalOpen}
+          onClose={() => setIsExamModalOpen(false)}
+          appointment={selectedApp}
+          onComplete={fetchData}
+        />
+      )}
     </div>
   );
 };

@@ -104,6 +104,47 @@ namespace ConnectDB.Services
             return new { record, prescriptions };
         }
 
+        public async Task<object?> GetPatientHistoryAsync(int patientId)
+        {
+            var patient = await _context.Patients.FindAsync(patientId);
+            if (patient == null) return null;
+
+            var history = await _context.MedicalRecords
+                .Include(m => m.Appointment)
+                    .ThenInclude(a => a!.Doctor)
+                .Where(m => m.Appointment!.PatientId == patientId)
+                .OrderByDescending(m => m.RecordDate)
+                .Select(m => new {
+                    m.Id,
+                    m.RecordDate,
+                    DoctorName = m.Appointment!.Doctor!.FullName,
+                    m.Diagnosis,
+                    PrescriptionCount = _context.Prescriptions.Count(p => p.MedicalRecordId == m.Id),
+                    Status = "Hoàn thành"
+                })
+                .ToListAsync();
+
+            var upcoming = await _context.Appointments
+                .Include(a => a.Doctor)
+                .Where(a => a.PatientId == patientId && a.AppointmentTime > DateTime.Now)
+                .OrderBy(a => a.AppointmentTime)
+                .Select(a => new {
+                    a.Id,
+                    a.AppointmentTime,
+                    DoctorName = a.Doctor!.FullName,
+                    a.Status,
+                    Service = "Khám tổng quát", // Giả lập
+                    Room = "Phòng 402 - Tầng 4" // Giả lập
+                })
+                .ToListAsync();
+
+            return new { 
+                patient = new { pId = $"#CS-{patientId:D5}", patient.FullName, patient.Gender, patient.DateOfBirth },
+                history, 
+                upcoming 
+            };
+        }
+
         public async Task<bool> UpdateMedicalRecordAsync(int id, MedicalRecordUpdateDto model)
         {
             var record = await _context.MedicalRecords.FindAsync(id);

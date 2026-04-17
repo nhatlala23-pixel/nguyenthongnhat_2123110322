@@ -34,6 +34,20 @@ namespace ConnectDB.Services
             return patient;
         }
 
+        public async Task<IEnumerable<Patient>> GetPatientsByDoctorAsync(int doctorUserId)
+        {
+            var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == doctorUserId);
+            if (doctor == null) return new List<Patient>();
+
+            // Lấy các bệnh nhân có ít nhất 1 lịch hẹn với bác sĩ này
+            return await _context.Appointments
+                .Where(a => a.DoctorId == doctor.Id)
+                .Include(a => a.Patient)
+                .Select(a => a.Patient!)
+                .Distinct()
+                .ToListAsync();
+        }
+
         public async Task<Patient> AddPatientAsync(PatientCreateDto model)
         {
             // 1. Tạo User trước

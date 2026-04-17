@@ -21,6 +21,15 @@ namespace ConnectDB.Controllers
             _medicalRecordService = medicalRecordService;
         }
 
+        [HttpGet("patient/{patientId}")]
+        [Authorize(Roles = "Doctor,Admin")]
+        public async Task<IActionResult> GetPatientHistory(int patientId)
+        {
+            var history = await _medicalRecordService.GetPatientHistoryAsync(patientId);
+            if (history == null) return NotFound();
+            return Ok(history);
+        }
+
         // Bác sĩ khám bệnh + Kê đơn
         [HttpPost]
         [Authorize(Roles = "Doctor")]
