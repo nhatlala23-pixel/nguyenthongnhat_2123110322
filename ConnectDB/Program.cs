@@ -15,9 +15,22 @@ namespace ConnectDB
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Lấy PORT từ Render (hoặc dùng 8080 mặc định)
-            var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-            builder.WebHost.UseUrls($"http://+:{port}");
+            // Cấu hình CORS
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFrontend",
+                    policy => policy.WithOrigins("http://localhost:5173")
+                                    .AllowAnyMethod()
+                                    .AllowAnyHeader()
+                                    .AllowCredentials());
+            });
+
+            // Lấy PORT từ Render (Nếu không có thì để hệ thống tự quyết định theo launchSettings)
+            var renderPort = Environment.GetEnvironmentVariable("PORT");
+            if (!string.IsNullOrEmpty(renderPort))
+            {
+                builder.WebHost.UseUrls($"http://+:{renderPort}");
+            }
 
             // Add services to the container.
             // Nếu có DATABASE_URL (PostgreSQL trên Render) thì chuyển đổi sang Connection String chuẩn của .NET
@@ -86,6 +99,7 @@ namespace ConnectDB
             builder.Services.AddScoped<IDoctorService, DoctorService>();
             builder.Services.AddScoped<IPatientService, PatientService>();
             builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+            builder.Services.AddScoped<IDashboardService, DashboardService>();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
@@ -140,11 +154,44 @@ namespace ConnectDB
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
                     {
                         var databaseCreator = dbContext.Database.GetService<Microsoft.EntityFrameworkCore.Storage.IDatabaseCreator>() as Microsoft.EntityFrameworkCore.Storage.RelationalDatabaseCreator;
-                        try { databaseCreator.CreateTables(); } catch { /* Bảng có thể đã tồn tại */ }
+                        try { databaseCreator?.CreateTables(); } catch { /* Bảng có thể đã tồn tại */ }
                     }
                     else
                     {
                         dbContext.Database.Migrate();
+                    }
+
+                    // Seed Admin User (Ưu tiên tạo tài khoản admin/admin123 để đăng nhập)
+                    if (!dbContext.Users.Any(u => u.Username == "admin"))
+                    {
+                        var adminUser = new ConnectDB.Models.User
+                        {
+                            Username = "admin",
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
+                            Role = "Admin"
+                        };
+                        dbContext.Users.Add(adminUser);
+                        dbContext.SaveChanges();
+                        Console.WriteLine("***************************************************");
+                        Console.WriteLine("--> SEED DATA SUCCESS: admin / admin123");
+                        Console.WriteLine("***************************************************");
+                    }
+
+                    // Seed Departments (Chuyên khoa)
+                    if (!dbContext.Departments.Any())
+                    {
+                        var departments = new List<ConnectDB.Models.Department>
+                        {
+                            new ConnectDB.Models.Department { Name = "Tim mạch", Description = "Điều trị các bệnh lý về tim và mạch máu chuyên sâu." },
+                            new ConnectDB.Models.Department { Name = "Thần kinh", Description = "Chăm sóc não bộ và hệ thần kinh trung ương." },
+                            new ConnectDB.Models.Department { Name = "Nhi khoa", Description = "Sức khỏe toàn diện cho trẻ em từ sơ sinh." },
+                            new ConnectDB.Models.Department { Name = "Chấn thương", Description = "Phục hồi chức năng và điều trị cơ xương khớp." },
+                            new ConnectDB.Models.Department { Name = "Nhãn khoa", Description = "Khám và chăm sóc sức khỏe thị lực chuyên khoa." },
+                            new ConnectDB.Models.Department { Name = "Da liễu", Description = "Giải pháp cho làn da và các bệnh lý về da liễu." }
+                        };
+                        dbContext.Departments.AddRange(departments);
+                        dbContext.SaveChanges();
+                        Console.WriteLine("--> SEED DEPARTMENTS SUCCESS");
                     }
                 }
             }
@@ -153,11 +200,11 @@ namespace ConnectDB
                 Console.WriteLine($"[Database Init Error] {ex.Message}");
             }
 
+            // Phục vụ file tĩnh từ wwwroot
+            app.UseStaticFiles();
+
             // Chỉ dùng HTTPS redirect khi local, Render tự lo HTTPS ở load balancer
-            if (!app.Environment.IsProduction())
-            {
-                app.UseHttpsRedirection();
-            }
+            app.UseCors("AllowFrontend");
 
             app.UseAuthentication();
             app.UseAuthorization();

@@ -49,7 +49,7 @@ namespace ConnectDB.Migrations
 
                     b.HasIndex("PatientId");
 
-                    b.ToTable("Appointments");
+                    b.ToTable("appointments");
                 });
 
             modelBuilder.Entity("ConnectDB.Models.Department", b =>
@@ -69,7 +69,7 @@ namespace ConnectDB.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Departments");
+                    b.ToTable("departments");
                 });
 
             modelBuilder.Entity("ConnectDB.Models.Doctor", b =>
@@ -87,6 +87,9 @@ namespace ConnectDB.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Specialization")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -100,7 +103,36 @@ namespace ConnectDB.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Doctors");
+                    b.ToTable("doctors");
+                });
+
+            modelBuilder.Entity("ConnectDB.Models.DoctorSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DoctorId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TimeSlot")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorId");
+
+                    b.ToTable("doctorschedules");
                 });
 
             modelBuilder.Entity("ConnectDB.Models.Invoice", b =>
@@ -136,7 +168,7 @@ namespace ConnectDB.Migrations
 
                     b.HasIndex("AppointmentId");
 
-                    b.ToTable("Invoices");
+                    b.ToTable("invoices");
                 });
 
             modelBuilder.Entity("ConnectDB.Models.MedicalRecord", b =>
@@ -165,7 +197,7 @@ namespace ConnectDB.Migrations
 
                     b.HasIndex("AppointmentId");
 
-                    b.ToTable("MedicalRecords");
+                    b.ToTable("medicalrecords");
                 });
 
             modelBuilder.Entity("ConnectDB.Models.Patient", b =>
@@ -198,7 +230,7 @@ namespace ConnectDB.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Patients");
+                    b.ToTable("patients");
                 });
 
             modelBuilder.Entity("ConnectDB.Models.Prescription", b =>
@@ -228,7 +260,7 @@ namespace ConnectDB.Migrations
 
                     b.HasIndex("MedicalRecordId");
 
-                    b.ToTable("Prescriptions");
+                    b.ToTable("prescriptions");
                 });
 
             modelBuilder.Entity("ConnectDB.Models.User", b =>
@@ -253,7 +285,7 @@ namespace ConnectDB.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("users");
                 });
 
             modelBuilder.Entity("ConnectDB.Models.Appointment", b =>
@@ -290,6 +322,17 @@ namespace ConnectDB.Migrations
                     b.Navigation("Department");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ConnectDB.Models.DoctorSchedule", b =>
+                {
+                    b.HasOne("ConnectDB.Models.Doctor", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Doctor");
                 });
 
             modelBuilder.Entity("ConnectDB.Models.Invoice", b =>

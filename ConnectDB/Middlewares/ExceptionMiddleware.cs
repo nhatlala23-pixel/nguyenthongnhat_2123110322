@@ -4,6 +4,8 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using ConnectDB.Helpers;
+using ConnectDB.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace ConnectDB.Middlewares
 {
@@ -34,9 +36,19 @@ namespace ConnectDB.Middlewares
         private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
             context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            
+            var statusCode = (int)HttpStatusCode.InternalServerError;
+            var message = "Internal Server Error from the custom middleware.";
 
-            var response = ApiResponse.FailureResult("Internal Server Error from the custom middleware.");
+            if (exception is AppException appException)
+            {
+                statusCode = (int)appException.StatusCode;
+                message = appException.Message;
+            }
+
+            context.Response.StatusCode = statusCode;
+
+            var response = ApiResponse.FailureResult(message);
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(response));
         }

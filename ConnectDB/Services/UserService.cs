@@ -63,6 +63,23 @@ namespace ConnectDB.Services
             return GenerateJwtToken(user);
         }
 
+        public async Task<object?> LoginWithDetailsAsync(UserLoginDto model)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username);
+
+            if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
+                return null;
+
+            var token = GenerateJwtToken(user);
+
+            return new
+            {
+                user = new { id = user.Id, username = user.Username },
+                role = user.Role,
+                token = token
+            };
+        }
+
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
             return await _context.Users.ToListAsync();

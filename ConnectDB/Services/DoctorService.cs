@@ -26,6 +26,44 @@ namespace ConnectDB.Services
             return await _context.Doctors.Include(d => d.Department).FirstOrDefaultAsync(d => d.Id == id);
         }
 
+        public async Task<Doctor?> GetDoctorByUserIdAsync(int userId)
+        {
+            return await _context.Doctors.Include(d => d.Department).FirstOrDefaultAsync(d => d.UserId == userId);
+        }
+
+        public async Task<Doctor> AddDoctorAsync(DoctorCreateDto model)
+        {
+            // 0. Kiểm tra Username đã tồn tại chưa
+            if (await _context.Users.AnyAsync(u => u.Username == model.Username))
+            {
+                throw new System.Exception("Tên đăng nhập đã tồn tại trong hệ thống.");
+            }
+
+            // 1. Tạo User trước
+            var user = new User
+            {
+                Username = model.Username,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
+                Role = "Doctor"
+            };
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            // 2. Tạo Doctor liên kết với User
+            var doctor = new Doctor
+            {
+                UserId = user.Id,
+                FullName = model.FullName,
+                Specialization = model.Specialization,
+                ImageUrl = model.ImageUrl,
+                DepartmentId = model.DepartmentId
+            };
+            _context.Doctors.Add(doctor);
+            await _context.SaveChangesAsync();
+
+            return doctor;
+        }
+
         public async Task<bool> UpdateDoctorAsync(int id, DoctorUpdateDto model)
         {
             var doctor = await _context.Doctors.FindAsync(id);
@@ -33,6 +71,7 @@ namespace ConnectDB.Services
 
             doctor.FullName = model.FullName;
             doctor.Specialization = model.Specialization;
+            doctor.ImageUrl = model.ImageUrl;
             doctor.DepartmentId = model.DepartmentId;
 
             await _context.SaveChangesAsync();

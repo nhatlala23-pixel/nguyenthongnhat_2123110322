@@ -34,6 +34,33 @@ namespace ConnectDB.Services
             return patient;
         }
 
+        public async Task<Patient> AddPatientAsync(PatientCreateDto model)
+        {
+            // 1. Tạo User trước
+            var user = new User
+            {
+                Username = model.Username,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
+                Role = "Patient"
+            };
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            // 2. Tạo Patient liên kết với User
+            var patient = new Patient
+            {
+                UserId = user.Id,
+                FullName = model.FullName,
+                DateOfBirth = model.DateOfBirth,
+                Gender = model.Gender,
+                PhoneNumber = model.PhoneNumber
+            };
+            _context.Patients.Add(patient);
+            await _context.SaveChangesAsync();
+
+            return patient;
+        }
+
         public async Task<bool> UpdatePatientAsync(int id, int userId, string role, PatientUpdateDto model)
         {
             var patient = await _context.Patients.FindAsync(id);

@@ -6,6 +6,8 @@ namespace ConnectDB.DTOs
         public string Password { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string Specialization { get; set; } = string.Empty;
+        public string? ImageUrl { get; set; }
+        public Microsoft.AspNetCore.Http.IFormFile? Image { get; set; }
         public int? DepartmentId { get; set; }
     }
 
@@ -13,6 +15,8 @@ namespace ConnectDB.DTOs
     {
         public string FullName { get; set; } = string.Empty;
         public string Specialization { get; set; } = string.Empty;
+        public string? ImageUrl { get; set; }
+        public Microsoft.AspNetCore.Http.IFormFile? Image { get; set; }
         public int? DepartmentId { get; set; }
     }
 }

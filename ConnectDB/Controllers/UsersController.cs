@@ -6,7 +6,6 @@ using ConnectDB.Models;
 using ConnectDB.DTOs;
 
 using ConnectDB.Services;
-using Microsoft.AspNetCore.Authorization;
 
 namespace ConnectDB.Controllers
 {

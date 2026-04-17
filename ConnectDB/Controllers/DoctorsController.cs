@@ -26,24 +26,35 @@ namespace ConnectDB.Controllers
         // POST: api/Doctors
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<Doctor>> PostDoctor(DoctorCreateDto model)
+        public async Task<IActionResult> CreateDoctor([FromForm] DoctorCreateDto model)
         {
-            // Tạm thời giữ logic đăng ký User ở đây hoặc ủy quyền cho UserService
-            var success = await _userService.RegisterAsync(new UserRegisterDto 
-            { 
-                Username = model.Username, 
-                Password = model.Password, 
-                Role = "Doctor", 
-                FullName = model.FullName, 
-                Specialization = model.Specialization 
-            });
+            try
+            {
+                // Xử lý upload ảnh nếu có
+                if (model.Image != null && model.Image.Length > 0)
+                {
+                    string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "doctors");
+                    if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
 
-            if (!success) return BadRequest("Username already exists");
+                    string fileName = Guid.NewGuid().ToString() + "_" + model.Image.FileName;
+                    string filePath = Path.Combine(uploadsFolder, fileName);
 
-            // Lấy lại bác sĩ vừa tạo (vì logic tạo profile đã nằm trong RegisterAsync của UserService)
-            // Đây là một ví dụ về việc logic RegisterAsync đang gánh quá nhiều. 
-            // Nhưng để cho đồng bộ, ta cứ lấy danh sách.
-            return Ok("Doctor created successfully via registration");
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.Image.CopyToAsync(fileStream);
+                    }
+
+                    // Lưu đường dẫn tương đối để truy cập từ trình duyệt
+                    model.ImageUrl = $"/uploads/doctors/{fileName}";
+                }
+
+                var doctor = await _doctorService.AddDoctorAsync(model);
+                return CreatedAtAction(nameof(GetDoctor), new { id = doctor.Id }, doctor);
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // GET: api/Doctors
@@ -55,7 +66,7 @@ namespace ConnectDB.Controllers
 
         // GET: api/Doctors/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Doctor>> GetDoctor(int id)
+        public async Task<IActionResult> GetDoctor(int id)
         {
             var doctor = await _doctorService.GetDoctorByIdAsync(id);
             if (doctor == null) return NotFound();
@@ -65,12 +76,36 @@ namespace ConnectDB.Controllers
         // PUT: api/Doctors/5
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> PutDoctor(int id, DoctorUpdateDto model)
+        public async Task<IActionResult> PutDoctor(int id, [FromForm] DoctorUpdateDto model)
         {
-            var success = await _doctorService.UpdateDoctorAsync(id, model);
-            if (!success) return NotFound();
+            try
+            {
+                // Xử lý upload ảnh nếu có file mới
+                if (model.Image != null && model.Image.Length > 0)
+                {
+                    string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "doctors");
+                    if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
 
-            return NoContent();
+                    string fileName = Guid.NewGuid().ToString() + "_" + model.Image.FileName;
+                    string filePath = Path.Combine(uploadsFolder, fileName);
+
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.Image.CopyToAsync(fileStream);
+                    }
+
+                    model.ImageUrl = $"/uploads/doctors/{fileName}";
+                }
+
+                var success = await _doctorService.UpdateDoctorAsync(id, model);
+                if (!success) return NotFound();
+
+                return NoContent();
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // DELETE: api/Doctors/5

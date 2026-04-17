@@ -30,7 +30,7 @@ namespace ConnectDB.Helpers
         public static ApiResponse SuccessResult(string message = "Success") 
             => new ApiResponse(true, message);
 
-        public static ApiResponse FailureResult(string message) 
+        public new static ApiResponse FailureResult(string message) 
             => new ApiResponse(false, message);
     }
 }

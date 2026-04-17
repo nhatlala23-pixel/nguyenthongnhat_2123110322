@@ -9,6 +9,8 @@ namespace ConnectDB.Services
     {
         Task<IEnumerable<Doctor>> GetAllDoctorsAsync();
         Task<Doctor?> GetDoctorByIdAsync(int id);
+        Task<Doctor?> GetDoctorByUserIdAsync(int userId);
+        Task<Doctor> AddDoctorAsync(DoctorCreateDto model);
         Task<bool> UpdateDoctorAsync(int id, DoctorUpdateDto model);
         Task<bool> DeleteDoctorAsync(int id);
     }

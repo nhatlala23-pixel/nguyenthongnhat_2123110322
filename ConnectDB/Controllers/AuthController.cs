@@ -36,12 +36,12 @@ namespace ConnectDB.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginDto model)
         {
-            var token = await _userService.LoginAsync(model);
+            var result = await _userService.LoginWithDetailsAsync(model);
 
-            if (token == null)
+            if (result == null)
                 return Unauthorized("Invalid username or password");
 
-            return Ok(new { token });
+            return Ok(result);
         }
     }
 }

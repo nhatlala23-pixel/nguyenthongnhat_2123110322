@@ -9,6 +9,7 @@ namespace ConnectDB.Services
     {
         Task<bool> RegisterAsync(UserRegisterDto model);
         Task<string?> LoginAsync(UserLoginDto model);
+        Task<object?> LoginWithDetailsAsync(UserLoginDto model);
         Task<IEnumerable<User>> GetAllUsersAsync();
         Task<User?> GetUserByIdAsync(int id);
         Task<bool> UpdateUserAsync(int id, UserUpdateDto model);

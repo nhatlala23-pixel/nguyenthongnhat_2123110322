@@ -31,16 +31,28 @@ namespace ConnectDB.Controllers
 
         // GET: api/Patients/5
         [HttpGet("{id}")]
-        [Authorize]
-        public async Task<ActionResult<Patient>> GetPatient(int id)
+        public async Task<IActionResult> GetPatient(int id)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var userRole = User.FindFirstValue(ClaimTypes.Role)!;
-
-            var patient = await _patientService.GetPatientByIdAsync(id, userId, userRole);
+            var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
+            var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+            
+            var patient = await _patientService.GetPatientByIdAsync(id, userId, role);
             if (patient == null) return NotFound();
-
             return Ok(patient);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreatePatient(PatientCreateDto model)
+        {
+            try
+            {
+                var patient = await _patientService.AddPatientAsync(model);
+                return CreatedAtAction(nameof(GetPatient), new { id = patient.Id }, patient);
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // PUT: api/Patients/5

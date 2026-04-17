@@ -16,6 +16,8 @@ namespace ConnectDB.Models
         [Required]
         public string Specialization { get; set; } = string.Empty;
 
+        public string? ImageUrl { get; set; }
+
         public int? DepartmentId { get; set; }
         [ForeignKey("DepartmentId")]
         public virtual Department? Department { get; set; }
