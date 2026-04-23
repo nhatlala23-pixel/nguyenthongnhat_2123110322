@@ -9,6 +9,12 @@ namespace ConnectDB.DTOs
         public string? ImageUrl { get; set; }
         public Microsoft.AspNetCore.Http.IFormFile? Image { get; set; }
         public int? DepartmentId { get; set; }
+        
+        public string? Position { get; set; }
+        public string? Introduction { get; set; }
+        public string? Biography { get; set; }
+        public decimal? ConsultationPrice { get; set; }
+        public string? ClinicAddress { get; set; }
     }
 
     public class DoctorUpdateDto
@@ -18,5 +24,11 @@ namespace ConnectDB.DTOs
         public string? ImageUrl { get; set; }
         public Microsoft.AspNetCore.Http.IFormFile? Image { get; set; }
         public int? DepartmentId { get; set; }
+
+        public string? Position { get; set; }
+        public string? Introduction { get; set; }
+        public string? Biography { get; set; }
+        public decimal? ConsultationPrice { get; set; }
+        public string? ClinicAddress { get; set; }
     }
 }

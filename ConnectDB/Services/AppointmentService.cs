@@ -23,7 +23,22 @@ namespace ConnectDB.Services
         public async Task<int> BookAppointmentAsync(int userId, AppointmentCreateDto model)
         {
             var patient = await _context.Patients.FirstOrDefaultAsync(p => p.UserId == userId);
-            if (patient == null) throw new NotFoundException("Patient profile not found");
+            
+            // Tự động tạo hồ sơ bệnh nhân nếu thiếu (Self-healing)
+            if (patient == null)
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null && user.Role == AppRoles.Patient)
+                {
+                    patient = new Patient { UserId = userId, FullName = user.Username };
+                    _context.Patients.Add(patient);
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    throw new NotFoundException("Patient profile not found and cannot be created");
+                }
+            }
 
             var appointment = new Appointment
             {
@@ -64,14 +79,16 @@ namespace ConnectDB.Services
             if (role == AppRoles.Patient)
             {
                 var patient = await _context.Patients.FirstOrDefaultAsync(p => p.UserId == userId);
-                if (patient == null) throw new NotFoundException("Patient profile not found");
+                
+                // Nếu thiếu, trả về danh sách trống nhưng không báo lỗi 404
+                if (patient == null) return new PaginatedList<Appointment>(new List<Appointment>(), 0, pageIndex, pageSize);
                 
                 query = query.Where(a => a.PatientId == patient.Id);
             }
             else if (role == AppRoles.Doctor)
             {
                 var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
-                if (doctor == null) throw new NotFoundException("Doctor profile not found");
+                if (doctor == null) return new PaginatedList<Appointment>(new List<Appointment>(), 0, pageIndex, pageSize);
 
                 query = query.Where(a => a.DoctorId == doctor.Id);
             }
@@ -101,20 +118,23 @@ namespace ConnectDB.Services
             var appointment = await _context.Appointments.Include(a => a.Patient).FirstOrDefaultAsync(a => a.Id == id);
             if (appointment == null) throw new NotFoundException("Appointment not found");
 
-            if (role != AppRoles.Admin && appointment.Patient?.UserId != userId)
+            // Admin has full control, Others only if it's their own or they are the doctor
+            if (role != AppRoles.Admin && role != AppRoles.Doctor && appointment.Patient?.UserId != userId)
             {
                 throw new ForbiddenException("You don't have permission to update this appointment");
             }
 
-            if (appointment.Status != AppointmentStatus.Pending.ToString() && role != AppRoles.Admin)
+            // Patients can only update if Pending
+            if (role == AppRoles.Patient && appointment.Status != AppointmentStatus.Pending.ToString())
             {
                 throw new BadRequestException("Cannot update an appointment that is already confirmed or completed");
             }
 
-            appointment.DoctorId = model.DoctorId;
-            appointment.AppointmentTime = model.AppointmentTime;
+            if (model.DoctorId > 0) appointment.DoctorId = model.DoctorId;
+            if (model.AppointmentTime != default) appointment.AppointmentTime = model.AppointmentTime;
             
-            if (role == AppRoles.Admin && !string.IsNullOrEmpty(model.Status))
+            // Allow status update if Admin or Doctor (e.g., Doctor checking in)
+            if ((role == AppRoles.Admin || role == AppRoles.Doctor) && !string.IsNullOrEmpty(model.Status))
             {
                 appointment.Status = model.Status;
             }

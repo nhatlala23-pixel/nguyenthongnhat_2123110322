@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace ConnectDB.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/appointments")]
     [ApiController]
     public class AppointmentsController : ControllerBase
     {
@@ -35,18 +35,18 @@ namespace ConnectDB.Controllers
             return Ok(new { message = "Appointment booked successfully", appointmentId = appointmentId });
         }
 
-        // 2. Receptionist xác nhận lịch
+        // 2. Receptionist/Admin xác nhận lịch
         [HttpPatch("{id}/confirm")]
-        [Authorize(Roles = AppRoles.Receptionist)]
+        [Authorize(Roles = "Admin,Receptionist")]
         public async Task<IActionResult> ConfirmAppointment(int id)
         {
             await _appointmentService.ConfirmAppointmentAsync(id);
             return Ok(new { message = "Appointment confirmed" });
         }
 
-        // 3. Receptionist Check-in
+        // 3. Receptionist/Admin/Doctor Check-in
         [HttpPatch("{id}/checkin")]
-        [Authorize(Roles = AppRoles.Receptionist)]
+        [Authorize(Roles = "Admin,Receptionist,Doctor")]
         public async Task<IActionResult> CheckIn(int id)
         {
             await _appointmentService.CheckInAsync(id);

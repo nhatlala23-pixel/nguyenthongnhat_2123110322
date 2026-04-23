@@ -18,6 +18,12 @@ namespace ConnectDB.Models
 
         public string? ImageUrl { get; set; }
 
+        public string? Position { get; set; } // e.g., PGS, TS, BS
+        public string? Introduction { get; set; } // Short summary
+        public string? Biography { get; set; } // Detailed history
+        public decimal? ConsultationPrice { get; set; }
+        public string? ClinicAddress { get; set; }
+
         public int? DepartmentId { get; set; }
         [ForeignKey("DepartmentId")]
         public virtual Department? Department { get; set; }

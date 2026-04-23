@@ -56,7 +56,12 @@ namespace ConnectDB.Services
                 FullName = model.FullName,
                 Specialization = model.Specialization,
                 ImageUrl = model.ImageUrl,
-                DepartmentId = model.DepartmentId
+                DepartmentId = model.DepartmentId,
+                Position = model.Position,
+                Introduction = model.Introduction,
+                Biography = model.Biography,
+                ConsultationPrice = model.ConsultationPrice,
+                ClinicAddress = model.ClinicAddress
             };
             _context.Doctors.Add(doctor);
             await _context.SaveChangesAsync();
@@ -73,6 +78,11 @@ namespace ConnectDB.Services
             doctor.Specialization = model.Specialization;
             doctor.ImageUrl = model.ImageUrl;
             doctor.DepartmentId = model.DepartmentId;
+            doctor.Position = model.Position;
+            doctor.Introduction = model.Introduction;
+            doctor.Biography = model.Biography;
+            doctor.ConsultationPrice = model.ConsultationPrice;
+            doctor.ClinicAddress = model.ClinicAddress;
 
             await _context.SaveChangesAsync();
             return true;

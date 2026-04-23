@@ -89,7 +89,10 @@ namespace ConnectDB
                 };
             });
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers().AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+            });
             
             // Register Services
             builder.Services.AddScoped<IVnPayService, VnPayService>();
