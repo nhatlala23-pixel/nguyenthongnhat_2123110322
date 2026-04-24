@@ -160,11 +160,35 @@ namespace ConnectDB
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                     
-                    // Nếu trên Render (Postgres), dùng cơ chế ép tạo bảng
+                    // Nếu trên Render (Postgres), dùng cơ chế tự động sửa Schema (Vá lỗi thiếu cột)
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
                     {
                         var databaseCreator = dbContext.Database.GetService<Microsoft.EntityFrameworkCore.Storage.IDatabaseCreator>() as Microsoft.EntityFrameworkCore.Storage.RelationalDatabaseCreator;
-                        try { databaseCreator?.CreateTables(); } catch { /* Bảng có thể đã tồn tại */ }
+                        try 
+                        { 
+                            databaseCreator?.CreateTables(); 
+                            Console.WriteLine("--> Database Tables Created");
+                        } 
+                        catch 
+                        { 
+                            // Nếu bảng đã tồn tại, tự động vá các cột mới nếu thiếu
+                            Console.WriteLine("--> Tables exist, checking for missing columns in 'doctors' table...");
+                            string[] repairSqls = { 
+                                "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"ImageUrl\" text;",
+                                "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"Position\" text;",
+                                "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"Introduction\" text;",
+                                "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"Biography\" text;",
+                                "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"ConsultationPrice\" numeric(18,2);",
+                                "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"ClinicAddress\" text;",
+                                "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"DepartmentId\" integer;"
+                            };
+
+                            foreach (var sql in repairSqls)
+                            {
+                                try { dbContext.Database.ExecuteSqlRaw(sql); } catch { }
+                            }
+                            Console.WriteLine("--> Schema repair for 'doctors' completed!");
+                        }
                     }
                     else
                     {
