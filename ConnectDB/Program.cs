@@ -193,9 +193,8 @@ namespace ConnectDB
                             foreach (var sql in repairDoctors) { try { dbContext.Database.ExecuteSqlRaw(sql); } catch { } }
 
                             // Vá lỗi bảng Lịch bác sĩ (DoctorSchedules)
-                            // Nếu bảng chưa có, ta có thể thử tạo thủ công hoặc đảm bảo các cột tồn tại
                             string[] repairSchedules = {
-                                "CREATE TABLE IF NOT EXISTS doctorschedules (id SERIAL PRIMARY KEY, doctorid INTEGER, date TIMESTAMP, timeslot TEXT, isavailable BOOLEAN);",
+                                "CREATE TABLE IF NOT EXISTS doctorschedules (\"Id\" SERIAL PRIMARY KEY, \"DoctorId\" INTEGER, \"Date\" TIMESTAMP, \"TimeSlot\" TEXT, \"IsAvailable\" BOOLEAN);",
                                 "ALTER TABLE doctorschedules ADD COLUMN IF NOT EXISTS \"DoctorId\" integer;",
                                 "ALTER TABLE doctorschedules ADD COLUMN IF NOT EXISTS \"Date\" timestamp;",
                                 "ALTER TABLE doctorschedules ADD COLUMN IF NOT EXISTS \"TimeSlot\" text;",
