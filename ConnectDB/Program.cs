@@ -160,6 +160,12 @@ namespace ConnectDB
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                     
+                    // TỰ ĐỘNG XÓA BẢNG LỖI ĐỂ TẠO LẠI (DÙNG 1 LẦN)
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
+                    {
+                        try { dbContext.Database.ExecuteSqlRaw("DROP TABLE IF EXISTS doctorschedules CASCADE;"); } catch { }
+                    }
+
                     // Nếu trên Render (Postgres), dùng cơ chế tự động sửa Schema (Vá lỗi thiếu cột)
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
                     {
