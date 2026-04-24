@@ -38,19 +38,30 @@ namespace ConnectDB.Services
             {
                 if (!string.IsNullOrEmpty(kv.Value))
                 {
-                    data.Append(WebUtility.UrlEncode(kv.Key) + "=" + WebUtility.UrlEncode(kv.Value) + "&");
+                    data.Append(Uri.EscapeDataString(kv.Key) + "=" + Uri.EscapeDataString(kv.Value) + "&");
                 }
             }
 
             var queryString = data.ToString();
             baseUrl += "?" + queryString;
-            var signData = queryString;
-            if (signData.Length > 0)
+            
+            // For VNPay 2.1.0, the signature is calculated on the RAW data (not URL encoded)
+            var signData = new StringBuilder();
+            foreach (var kv in _requestData)
             {
-                signData = signData.Remove(data.Length - 1);
+                if (!string.IsNullOrEmpty(kv.Value))
+                {
+                    signData.Append(kv.Key + "=" + kv.Value + "&");
+                }
+            }
+            
+            var signDataString = signData.ToString();
+            if (signDataString.Length > 0)
+            {
+                signDataString = signDataString.Remove(signDataString.Length - 1);
             }
 
-            var vnpSecureHash = HmacSha512(hashKey, signData);
+            var vnpSecureHash = HmacSha512(hashKey, signDataString);
             baseUrl += "vnp_SecureHash=" + vnpSecureHash;
 
             return baseUrl;
@@ -83,21 +94,24 @@ namespace ConnectDB.Services
         private string GetResponseRaw()
         {
             var data = new StringBuilder();
-            if (_responseData.ContainsKey("vnp_SecureHashType"))
+            // Remove secure hash from response data before validating
+            var responseData = new SortedList<string, string>(_responseData, new VnPayComparer());
+            if (responseData.ContainsKey("vnp_SecureHashType"))
             {
-                _responseData.Remove("vnp_SecureHashType");
+                responseData.Remove("vnp_SecureHashType");
             }
 
-            if (_responseData.ContainsKey("vnp_SecureHash"))
+            if (responseData.ContainsKey("vnp_SecureHash"))
             {
-                _responseData.Remove("vnp_SecureHash");
+                responseData.Remove("vnp_SecureHash");
             }
 
-            foreach (var kv in _responseData)
+            foreach (var kv in responseData)
             {
                 if (!string.IsNullOrEmpty(kv.Value))
                 {
-                    data.Append(WebUtility.UrlEncode(kv.Key) + "=" + WebUtility.UrlEncode(kv.Value) + "&");
+                    // For response validation, VNPay also uses raw data (not URL encoded)
+                    data.Append(kv.Key + "=" + kv.Value + "&");
                 }
             }
 

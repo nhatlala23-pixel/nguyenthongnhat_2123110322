@@ -29,10 +29,21 @@ namespace ConnectDB.Controllers
         [Authorize(Roles = AppRoles.Patient)]
         public async Task<IActionResult> BookAppointment([FromBody] AppointmentCreateDto model)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var appointmentId = await _appointmentService.BookAppointmentAsync(userId, model);
-
-            return Ok(new { message = "Appointment booked successfully", appointmentId = appointmentId });
+            try 
+            {
+                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var result = await _appointmentService.BookAppointmentAsync(userId, model);
+                
+                return Ok(new { 
+                    message = "Appointment booked successfully", 
+                    appointmentId = result.appointmentId,
+                    invoiceId = result.invoiceId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi hệ thống khi tạo lịch hẹn: " + ex.Message, detail = ex.InnerException?.Message });
+            }
         }
 
         // 2. Receptionist/Admin xác nhận lịch

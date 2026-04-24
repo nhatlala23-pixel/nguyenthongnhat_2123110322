@@ -13,6 +13,7 @@ namespace ConnectDB.Models
         public virtual Appointment? Appointment { get; set; }
 
         [Required]
+        [Column(TypeName = "decimal(18, 2)")]
         public decimal TotalAmount { get; set; }
         public bool IsPaid { get; set; } = false;
         public string? PaymentMethod { get; set; }

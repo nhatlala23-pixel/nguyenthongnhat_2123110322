@@ -21,6 +21,7 @@ namespace ConnectDB.Models
         public string? Position { get; set; } // e.g., PGS, TS, BS
         public string? Introduction { get; set; } // Short summary
         public string? Biography { get; set; } // Detailed history
+        [Column(TypeName = "decimal(18, 2)")]
         public decimal? ConsultationPrice { get; set; }
         public string? ClinicAddress { get; set; }
 

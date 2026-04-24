@@ -20,38 +20,53 @@ namespace ConnectDB.Services
             _context = context;
         }
 
-        public async Task<int> BookAppointmentAsync(int userId, AppointmentCreateDto model)
+        public async Task<(int appointmentId, int invoiceId)> BookAppointmentAsync(int userId, AppointmentCreateDto model)
         {
+            // Tăng thời gian chờ cho Database để tránh lỗi Timeout
+            _context.Database.SetCommandTimeout(60);
+
+            // 1. Lấy thông tin Bệnh nhân và Bác sĩ cùng lúc
             var patient = await _context.Patients.FirstOrDefaultAsync(p => p.UserId == userId);
-            
-            // Tự động tạo hồ sơ bệnh nhân nếu thiếu (Self-healing)
+            var doctor = await _context.Doctors.AsNoTracking().FirstOrDefaultAsync(d => d.Id == model.DoctorId);
+
+            if (doctor == null) throw new Exception("Không tìm thấy thông tin bác sĩ");
+
+            // 2. Nếu chưa có hồ sơ bệnh nhân, tạo mới ngay
             if (patient == null)
             {
                 var user = await _context.Users.FindAsync(userId);
-                if (user != null && user.Role == AppRoles.Patient)
-                {
-                    patient = new Patient { UserId = userId, FullName = user.Username };
-                    _context.Patients.Add(patient);
-                    await _context.SaveChangesAsync();
-                }
-                else
-                {
-                    throw new NotFoundException("Patient profile not found and cannot be created");
-                }
+                patient = new Patient 
+                { 
+                    UserId = userId, 
+                    FullName = user?.Username ?? "Patient " + userId 
+                };
+                _context.Patients.Add(patient);
+                await _context.SaveChangesAsync(); // Lưu bệnh nhân trước để có Id
             }
 
+            // 3. Tạo Lịch hẹn và Hóa đơn trong cùng một đợt lưu
             var appointment = new Appointment
             {
                 PatientId = patient.Id,
                 DoctorId = model.DoctorId,
                 AppointmentTime = model.AppointmentTime,
-                Status = AppointmentStatus.Pending.ToString()
+                Status = "Pending"
+            };
+
+            var invoice = new Invoice
+            {
+                Appointment = appointment,
+                TotalAmount = doctor.ConsultationPrice ?? 50000,
+                IsPaid = false,
+                CreatedDate = DateTime.Now
             };
 
             _context.Appointments.Add(appointment);
+            _context.Invoices.Add(invoice);
+
             await _context.SaveChangesAsync();
 
-            return appointment.Id;
+            return (appointment.Id, invoice.Id);
         }
 
         public async Task ConfirmAppointmentAsync(int id)
@@ -180,6 +195,11 @@ namespace ConnectDB.Services
 
             _context.Appointments.Remove(appointment);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<Invoice?> GetInvoiceByAppointmentIdAsync(int appointmentId)
+        {
+            return await _context.Invoices.FirstOrDefaultAsync(i => i.AppointmentId == appointmentId);
         }
     }
 }

@@ -22,9 +22,14 @@ namespace ConnectDB.Services
             vnpay.AddRequestData("vnp_Amount", ((long)(invoice.TotalAmount * 100)).ToString()); // VNPAY amount is in cents
             vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
             vnpay.AddRequestData("vnp_CurrCode", vnpConfig["CurrCode"]!);
-            vnpay.AddRequestData("vnp_IpAddr", context.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1");
+            var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            if (string.IsNullOrEmpty(ipAddress) || ipAddress == "::1")
+            {
+                ipAddress = "127.0.0.1";
+            }
+            vnpay.AddRequestData("vnp_IpAddr", ipAddress);
             vnpay.AddRequestData("vnp_Locale", vnpConfig["Locale"]!);
-            vnpay.AddRequestData("vnp_OrderInfo", $"Thanh toan hoa don {invoice.Id}");
+            vnpay.AddRequestData("vnp_OrderInfo", $"ThanhToanHoaDon_{invoice.Id}");
             vnpay.AddRequestData("vnp_OrderType", "other"); // Default type
             vnpay.AddRequestData("vnp_ReturnUrl", vnpConfig["ReturnUrl"]!);
             vnpay.AddRequestData("vnp_TxnRef", invoice.Id.ToString());

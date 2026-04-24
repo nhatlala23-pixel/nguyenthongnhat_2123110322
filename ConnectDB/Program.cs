@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
 using ConnectDB.Services;
+using ConnectDB.Models;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace ConnectDB
@@ -94,8 +95,12 @@ namespace ConnectDB
                 options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
             });
             
+            // Config Payment Options
+            builder.Services.Configure<MomoOptionModel>(builder.Configuration.GetSection("Momo"));
+            
             // Register Services
             builder.Services.AddScoped<IVnPayService, VnPayService>();
+            builder.Services.AddScoped<IMomoService, MomoService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IAppointmentService, AppointmentService>();
             builder.Services.AddScoped<IMedicalRecordService, MedicalRecordService>();

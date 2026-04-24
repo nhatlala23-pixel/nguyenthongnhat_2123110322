@@ -8,7 +8,7 @@ namespace ConnectDB.Services
 {
     public interface IAppointmentService
     {
-        Task<int> BookAppointmentAsync(int userId, AppointmentCreateDto model);
+        Task<(int appointmentId, int invoiceId)> BookAppointmentAsync(int userId, AppointmentCreateDto model);
         Task ConfirmAppointmentAsync(int id);
         Task CheckInAsync(int id);
         Task<PaginatedList<Appointment>> GetAppointmentsAsync(int userId, string role, int pageIndex = 1, int pageSize = 10);
@@ -16,5 +16,6 @@ namespace ConnectDB.Services
         Task UpdateAppointmentAsync(int id, int userId, string role, AppointmentUpdateDto model);
         Task CancelAppointmentAsync(int id, int userId, string role);
         Task DeleteAppointmentAsync(int id, int userId, string role);
+        Task<Invoice?> GetInvoiceByAppointmentIdAsync(int appointmentId);
     }
 }

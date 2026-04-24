@@ -13,11 +13,13 @@ namespace ConnectDB.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly IVnPayService _vnPayService;
+        private readonly IMomoService _momoService;
         private readonly IInvoiceService _invoiceService;
 
-        public PaymentController(IVnPayService vnPayService, IInvoiceService invoiceService)
+        public PaymentController(IVnPayService vnPayService, IMomoService momoService, IInvoiceService invoiceService)
         {
             _vnPayService = vnPayService;
+            _momoService = momoService;
             _invoiceService = invoiceService;
         }
 
@@ -34,8 +36,57 @@ namespace ConnectDB.Controllers
 
             if (invoice.IsPaid) return BadRequest("Invoice is already paid");
 
+            // Default to VnPay or add logic to choose
             var url = _vnPayService.CreatePaymentUrl(invoice, HttpContext);
             return Ok(new { paymentUrl = url });
+        }
+
+        // POST: api/payment/create-momo/{invoiceId}
+        [HttpPost("create-momo/{invoiceId}")]
+        [Authorize]
+        public async Task<IActionResult> CreateMomoPayment(int invoiceId)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userRole = User.FindFirstValue(ClaimTypes.Role)!;
+
+            var invoice = await _invoiceService.GetInvoiceAsync(invoiceId, userId, userRole);
+            if (invoice == null) return NotFound("Invoice not found or access denied");
+
+            if (invoice.IsPaid) return BadRequest("Invoice is already paid");
+
+            var response = await _momoService.CreatePaymentAsync(invoice);
+            
+            if (string.IsNullOrEmpty(response.PayUrl))
+            {
+                return BadRequest(new { message = "MoMo Error: " + response.Message, errorCode = response.ErrorCode });
+            }
+
+            return Ok(new { paymentUrl = response.PayUrl });
+        }
+
+        // GET: api/payment/momo-return
+        [HttpGet("momo-return")]
+        public async Task<IActionResult> MomoReturn()
+        {
+            var response = _momoService.PaymentExecute(Request.Query);
+            
+            // Momo returns result in query params
+            var errorCode = Request.Query["errorCode"];
+            if (errorCode != "0")
+            {
+                return BadRequest(new { message = "Payment failed", errorCode });
+            }
+
+            // Payment success - Update invoice
+            var orderIdParts = response.OrderId.Split('_');
+            var invoiceId = int.Parse(orderIdParts[0]);
+            var transactionId = Request.Query["transId"].ToString();
+
+            var success = await _invoiceService.ProcessVnPayPaymentAsync(invoiceId, transactionId); // Reusing logic for status update
+
+            if (!success) return BadRequest("Could not process payment for this invoice");
+
+            return Ok(new { message = "Payment successful", invoiceId = invoiceId, transactionId = transactionId });
         }
 
         // GET: api/payment/vnpay-return
