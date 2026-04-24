@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, Loader2, Star, Calendar, ArrowRight, Heart } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
-import api from '../services/api';
+import api, { IMAGE_BASE_URL } from '../services/api';
 
 const DoctorsList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -12,7 +12,7 @@ const DoctorsList = () => {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const imageBaseUrl = 'http://localhost:5274';
+  const imageBaseUrl = IMAGE_BASE_URL;
 
   useEffect(() => {
     const fetchDoctors = async () => {

@@ -20,7 +20,9 @@ namespace ConnectDB
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend",
-                    policy => policy.WithOrigins("http://localhost:5173")
+                    policy => policy.WithOrigins("http://localhost:5173", 
+                                                 "https://nguyenthongnhat-2123110322.vercel.app",
+                                                 "https://nguyenthongnhat-2123110322-khv9fibnp-nhatlala23-pixels-projects.vercel.app")
                                     .AllowAnyMethod()
                                     .AllowAnyHeader()
                                     .AllowCredentials());

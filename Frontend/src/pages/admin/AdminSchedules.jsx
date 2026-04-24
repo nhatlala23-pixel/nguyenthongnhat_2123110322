@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, User, Clock, Check, Loader2, Save, ChevronLeft, ChevronRight, Stethoscope, AlertCircle } from 'lucide-react';
-import api from '../../services/api';
+import api, { IMAGE_BASE_URL } from '../../services/api';
 
 const AdminSchedules = () => {
   const [doctors, setDoctors] = useState([]);
@@ -17,7 +17,7 @@ const AdminSchedules = () => {
     "17:00 - 18:00", "18:00 - 19:00", "19:00 - 20:00", "20:00 - 21:00"
   ];
 
-  const imageBaseUrl = 'http://localhost:5274';
+  const imageBaseUrl = IMAGE_BASE_URL;
 
   useEffect(() => {
     const fetchDoctors = async () => {

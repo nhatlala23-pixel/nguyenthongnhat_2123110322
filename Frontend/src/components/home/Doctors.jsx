@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Calendar, ArrowRight, ShieldCheck, Heart, Loader2 } from 'lucide-react';
-import api from '../../services/api';
+import api, { IMAGE_BASE_URL } from '../../services/api';
 
 const Doctors = () => {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Base URL cho ảnh
-  const imageBaseUrl = 'http://localhost:5274';
+  const imageBaseUrl = IMAGE_BASE_URL;
 
   useEffect(() => {
     const fetchDoctors = async () => {

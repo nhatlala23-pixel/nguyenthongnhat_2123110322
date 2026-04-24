@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5274/api', 
+  baseURL: 'https://nguyenthongnhat-2123110322.onrender.com/api', 
   headers: {
     'Content-Type': 'application/json',
   },
@@ -17,6 +17,6 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-export const IMAGE_BASE_URL = 'http://localhost:5274';
+export const IMAGE_BASE_URL = 'https://nguyenthongnhat-2123110322.onrender.com';
 
 export default api;
