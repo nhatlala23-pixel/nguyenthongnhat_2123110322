@@ -164,6 +164,7 @@ namespace ConnectDB
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
                     {
                         try { dbContext.Database.ExecuteSqlRaw("DROP TABLE IF EXISTS doctorschedules CASCADE;"); } catch { }
+                        try { dbContext.Database.ExecuteSqlRaw("DROP TABLE IF EXISTS \"DoctorSchedules\" CASCADE;"); } catch { }
                     }
 
                     // Nếu trên Render (Postgres), dùng cơ chế tự động sửa Schema (Vá lỗi thiếu cột)
