@@ -26,8 +26,11 @@ namespace ConnectDB.Controllers
         [HttpGet("doctor/{doctorId}")]
         public async Task<ActionResult<IEnumerable<DoctorSchedule>>> GetDoctorSchedules(int doctorId, [FromQuery] DateTime date)
         {
+            var startDate = date.Date;
+            var endDate = startDate.AddDays(1);
+
             var schedules = await _context.DoctorSchedules
-                .Where(s => s.DoctorId == doctorId && s.Date.Date == date.Date)
+                .Where(s => s.DoctorId == doctorId && s.Date >= startDate && s.Date < endDate)
                 .ToListAsync();
 
             return Ok(schedules);
@@ -38,9 +41,12 @@ namespace ConnectDB.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> BulkUpdateSchedules([FromBody] ScheduleCreateDto model)
         {
+            var startDate = model.Date.Date;
+            var endDate = startDate.AddDays(1);
+
             // 1. Xóa các khung giờ cũ của bác sĩ đó trong ngày đó
             var oldSchedules = await _context.DoctorSchedules
-                .Where(s => s.DoctorId == model.DoctorId && s.Date.Date == model.Date.Date)
+                .Where(s => s.DoctorId == model.DoctorId && s.Date >= startDate && s.Date < endDate)
                 .ToListAsync();
 
             _context.DoctorSchedules.RemoveRange(oldSchedules);
@@ -49,7 +55,7 @@ namespace ConnectDB.Controllers
             var newSchedules = model.TimeSlots.Select(slot => new DoctorSchedule
             {
                 DoctorId = model.DoctorId,
-                Date = model.Date.Date,
+                Date = startDate,
                 TimeSlot = slot,
                 IsAvailable = true
             }).ToList();
