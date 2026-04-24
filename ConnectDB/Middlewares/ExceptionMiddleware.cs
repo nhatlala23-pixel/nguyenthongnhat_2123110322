@@ -38,7 +38,12 @@ namespace ConnectDB.Middlewares
             context.Response.ContentType = "application/json";
             
             var statusCode = (int)HttpStatusCode.InternalServerError;
-            var message = "Internal Server Error from the custom middleware.";
+            var message = $"Internal Server Error: {exception.Message}";
+
+            if (exception.InnerException != null)
+            {
+                message += $" | Inner: {exception.InnerException.Message}";
+            }
 
             if (exception is AppException appException)
             {
