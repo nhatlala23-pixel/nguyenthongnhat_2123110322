@@ -173,7 +173,8 @@ namespace ConnectDB
                         { 
                             // Nếu bảng đã tồn tại, tự động vá các cột mới nếu thiếu
                             Console.WriteLine("--> Tables exist, checking for missing columns in 'doctors' table...");
-                            string[] repairSqls = { 
+                            // Vá lỗi bảng Bác sĩ
+                            string[] repairDoctors = { 
                                 "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"ImageUrl\" text;",
                                 "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"Position\" text;",
                                 "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"Introduction\" text;",
@@ -182,12 +183,20 @@ namespace ConnectDB
                                 "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"ClinicAddress\" text;",
                                 "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS \"DepartmentId\" integer;"
                             };
+                            foreach (var sql in repairDoctors) { try { dbContext.Database.ExecuteSqlRaw(sql); } catch { } }
 
-                            foreach (var sql in repairSqls)
-                            {
-                                try { dbContext.Database.ExecuteSqlRaw(sql); } catch { }
-                            }
-                            Console.WriteLine("--> Schema repair for 'doctors' completed!");
+                            // Vá lỗi bảng Lịch bác sĩ (DoctorSchedules)
+                            // Nếu bảng chưa có, ta có thể thử tạo thủ công hoặc đảm bảo các cột tồn tại
+                            string[] repairSchedules = {
+                                "CREATE TABLE IF NOT EXISTS doctorschedules (id SERIAL PRIMARY KEY, doctorid INTEGER, date TIMESTAMP, timeslot TEXT, isavailable BOOLEAN);",
+                                "ALTER TABLE doctorschedules ADD COLUMN IF NOT EXISTS \"DoctorId\" integer;",
+                                "ALTER TABLE doctorschedules ADD COLUMN IF NOT EXISTS \"Date\" timestamp;",
+                                "ALTER TABLE doctorschedules ADD COLUMN IF NOT EXISTS \"TimeSlot\" text;",
+                                "ALTER TABLE doctorschedules ADD COLUMN IF NOT EXISTS \"IsAvailable\" boolean;"
+                            };
+                            foreach (var sql in repairSchedules) { try { dbContext.Database.ExecuteSqlRaw(sql); } catch { } }
+
+                            Console.WriteLine("--> Schema repair completed!");
                         }
                     }
                     else
